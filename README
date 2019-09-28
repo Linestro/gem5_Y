@@ -5,4 +5,5 @@ sudo apt install build-essential git m4 scons zlib1g zlib1g-dev libprotobuf-dev 
 scons build/X86/gem5.opt -j5
 build/X86/gem5.opt configs/tutorial/simple.py
 build/X86/gem5.opt configs/learning_gem5/part1/two_level.py --l1i_size='1kB'
-
+build/X86/gem5.opt configs/tutorial/hello_run.py
+build/X86/gem5.opt --debug-flags=DRAM configs/tutorial/simple.py
