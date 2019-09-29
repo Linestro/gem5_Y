@@ -1,4 +1,4 @@
-This is the Haojie's gem5 simulator.
+This is Haojie's gem5 simulator.
 A Pure Pessimist: One who, when he has the choice of two evils, chooses both.
 
 sudo apt install build-essential git m4 scons zlib1g zlib1g-dev libprotobuf-dev protobuf-compiler libprotoc-dev libgoogle-perftools-dev python-dev python
