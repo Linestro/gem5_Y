@@ -102,6 +102,7 @@ TLB::insert(Addr vpn, const TlbEntry &entry)
         assert(newEntry->vaddr == vpn);
         return newEntry;
     }
+    printf("TLB entry real insertion detected. \n");
 
     if (freeList.empty())
         evictLRU();
@@ -289,6 +290,7 @@ TLB::translate(const RequestPtr &req,
 
     // If protected mode has been enabled...
     if (m5Reg.prot) {
+        bool missed = false;
         DPRINTF(TLB, "In protected mode.\n");
         // If we're not in 64-bit mode, do protection/limit checks
         if (m5Reg.mode != LongMode) {
@@ -375,6 +377,13 @@ TLB::translate(const RequestPtr &req,
                         Addr alignedVaddr = p->pTable->pageAlign(vaddr);
                         DPRINTF(TLB, "Mapping %#x to %#x\n", alignedVaddr,
                                 pte->paddr);
+
+                        printf("Handling a TLB miss for "
+                               "address %lx at pc %lx.\n",
+                                    vaddr, tc->instAddr());
+                        missed = true;
+                        printf("Inserting into TLB new entry... \n");
+
                         entry = insert(alignedVaddr, TlbEntry(
                                 p->pTable->pid(), alignedVaddr, pte->paddr,
                                 pte->flags & EmulationPageTable::Uncacheable,
@@ -383,7 +392,11 @@ TLB::translate(const RequestPtr &req,
                     DPRINTF(TLB, "Miss was serviced.\n");
                 }
             }
-
+            if(missed == false){
+            printf("TLB HIT for "
+                        "address %lx at physical adress %lx !\n",
+                        vaddr, entry->paddr);
+            }
             DPRINTF(TLB, "Entry found with paddr %#x, "
                     "doing protection checks.\n", entry->paddr);
             // Do paging protection checks.

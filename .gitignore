@@ -105,3 +105,4 @@ venv.bak/
 
 m5out/
 .m5out
+m5out/stats.txt
