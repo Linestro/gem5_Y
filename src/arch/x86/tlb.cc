@@ -60,7 +60,11 @@
 namespace X86ISA {
 
 TLB::TLB(const Params *p)
-    : BaseTLB(p), configAddress(0), size(p->size),
+    // I modified the TLB to be 16 entries to enable more evictions to happen. 
+    // To simulate a more complicated app to fill up the TLB. 
+    // orginal was size(p->size) instead of size(16)
+    // Under such condition, there are 21 LRUs and 53 TLB misses. 
+    : BaseTLB(p), configAddress(0), size(16),
       tlb(size), lruSeq(0)
 {
     if (!size)
@@ -88,6 +92,7 @@ TLB::evictLRU()
     }
 
     assert(tlb[lru].trieHandle);
+    printf("TLB LRU triggered. \n");
     trie.remove(tlb[lru].trieHandle);
     tlb[lru].trieHandle = NULL;
     freeList.push_back(&tlb[lru]);
