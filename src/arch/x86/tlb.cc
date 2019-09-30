@@ -65,8 +65,7 @@ TLB::TLB(const Params *p)
     // orginal was size(p->size) instead of size(16)
     // Under such condition, there are 21 LRU evictions and 53 TLB misses. 
 
-
-    // 26 out of 53 TLB misses are founded to have 2xsize Coalescing (with LRU eviction). 
+    // After coalescing, there are 3 LRU evictions and 47 TLB misses. 
 
     : BaseTLB(p), configAddress(0), size(16),
       tlb(size), lruSeq(0)
@@ -402,12 +401,20 @@ TLB::translate(const RequestPtr &req,
                         TlbEntry * next_entry = lookup(vaddr + 4096);
                         if(prev_entry && prev_entry->paddr == entry->paddr - 4096 && prev_entry -> is_super == 0){
                             prev_entry -> is_super = 1;
-                            // demapPage(vaddr, 0);
+                            TlbEntry *entry = trie.lookup(vaddr);
+                            if (entry) {
+                                entry->trieHandle = NULL;
+                                freeList.push_back(entry);
+                            }
                             printf("Superpage 2xsize detected. Coalescing vaddr: %lx, paddr: %lx and the following entry\n", vaddr - 1, prev_entry->paddr);
                         }
                         else if(next_entry && next_entry->paddr == entry->paddr + 4096 && next_entry -> is_super == 0){
                             next_entry -> is_super = -1;
-                            // demapPage(vaddr, 0);
+                            TlbEntry *entry = trie.lookup(vaddr);
+                            if (entry) {
+                                entry->trieHandle = NULL;
+                                freeList.push_back(entry);
+                            }
                             printf("Superpage 2xsize detected. Coalescing vaddr: %lx, paddr: %lx and the following entry\n", vaddr, entry->paddr);
                         }
                         else{
@@ -456,15 +463,15 @@ TLB::translate(const RequestPtr &req,
 
             Addr paddr = 0;
             paddr = entry->paddr | (vaddr & mask(entry->logBytes));
-            // if(hit_prev){
-            //     paddr = (lookup(vaddr - 4096)->paddr + 4096) | (vaddr & mask(lookup(vaddr - 4096)->logBytes));
-            // }
-            // else if(hit_next){
-            //     paddr = (lookup(vaddr + 4096)->paddr - 4096) | (vaddr & mask(lookup(vaddr + 4096)->logBytes));
-            // }
-            // else{
-            //     paddr = entry->paddr | (vaddr & mask(entry->logBytes));
-            // }
+            if(hit_prev){
+                paddr = (lookup(vaddr - 4096)->paddr + 4096) | (vaddr & mask(lookup(vaddr - 4096)->logBytes));
+            }
+            else if(hit_next){
+                paddr = (lookup(vaddr + 4096)->paddr - 4096) | (vaddr & mask(lookup(vaddr + 4096)->logBytes));
+            }
+            else{
+                paddr = entry->paddr | (vaddr & mask(entry->logBytes));
+            }
             DPRINTF(TLB, "Translated %#x -> %#x.\n", vaddr, paddr);
             req->setPaddr(paddr);
             if (entry->uncacheable)
