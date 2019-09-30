@@ -1,11 +1,11 @@
 
 ---------- Begin Simulation Statistics ----------
 final_tick                                   61130000                       # Number of ticks from beginning of simulation (restored from checkpoints and never reset)
-host_inst_rate                                 208986                       # Simulator instruction rate (inst/s)
-host_mem_usage                                 673820                       # Number of bytes of host memory used
-host_op_rate                                   373985                       # Simulator op (including micro ops) rate (op/s)
+host_inst_rate                                 206516                       # Simulator instruction rate (inst/s)
+host_mem_usage                                 673816                       # Number of bytes of host memory used
+host_op_rate                                   369992                       # Simulator op (including micro ops) rate (op/s)
 host_seconds                                     0.03                       # Real time elapsed on the host
-host_tick_rate                             1988714396                       # Simulator tick rate (ticks/s)
+host_tick_rate                             1967486489                       # Simulator tick rate (ticks/s)
 sim_freq                                 1000000000000                       # Frequency of simulated ticks
 sim_insts                                        6395                       # Number of instructions simulated
 sim_ops                                         11490                       # Number of ops (including micro ops) simulated
@@ -203,7 +203,7 @@ system.cpu.idle_fraction                     0.000000                       # Pe
 system.cpu.itb.rdAccesses                           0                       # TLB accesses on read requests
 system.cpu.itb.rdMisses                             0                       # TLB misses on read requests
 system.cpu.itb.wrAccesses                        8130                       # TLB accesses on write requests
-system.cpu.itb.wrMisses                            37                       # TLB misses on write requests
+system.cpu.itb.wrMisses                            38                       # TLB misses on write requests
 system.cpu.not_idle_fraction                 1.000000                       # Percentage of non-idle cycles
 system.cpu.numCycles                            61130                       # number of cpu cycles simulated
 system.cpu.numWorkItemsCompleted                    0                       # number of work items this cpu completed
