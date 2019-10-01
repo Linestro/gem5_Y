@@ -64,7 +64,7 @@ TLB::TLB(const Params *p)
     // To simulate a more complicated app to fill up the TLB. 
     // orginal was size(p->size) instead of size(16)
     // Under such condition, there are 21 LRUs and 53 TLB misses. 
-    : BaseTLB(p), configAddress(0), size(16),
+    : BaseTLB(p), configAddress(0), size(p->size),
       tlb(size), lruSeq(0)
 {
     if (!size)
@@ -77,6 +77,7 @@ TLB::TLB(const Params *p)
 
     walker = p->walker;
     walker->setTLB(this);
+    printf("The TLB size is: %d\n", size);
 }
 
 void
@@ -376,9 +377,11 @@ TLB::translate(const RequestPtr &req,
                         }
                     }
                     if (!pte) {
+                        printf("Page Fault occurs.. Going to Disk.\n");
                         return std::make_shared<PageFault>(vaddr, true, mode,
                                                            true, false);
                     } else {
+                        printf("No page fault.\n");
                         Addr alignedVaddr = p->pTable->pageAlign(vaddr);
                         DPRINTF(TLB, "Mapping %#x to %#x\n", alignedVaddr,
                                 pte->paddr);
@@ -398,7 +401,7 @@ TLB::translate(const RequestPtr &req,
                 }
             }
             if(missed == false){
-            printf("TLB HIT for "
+            printf("TLB real HIT for "
                         "address %lx at physical adress %lx !\n",
                         vaddr, entry->paddr);
             }

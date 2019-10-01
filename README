@@ -9,8 +9,8 @@ build/X86/gem5.opt configs/learning_gem5/part1/two_level.py --l1i_size='1kB'
 build/X86/gem5.opt configs/learning_gem5/part2/hello_goodbye.py
 build/X86/gem5.opt --debug-flags=DRAM configs/learning_gem5/part1/simple.py
 build/X86/gem5.opt --debug-flags=MMU configs/learning_gem5/part1/two_level.py --l1i_size='1kB'
-*** build/X86/gem5.opt --debug-flags=MMU configs/learning_gem5/part1/two_level.py --l1i_size='1kB' > output.log
-
+build/X86/gem5.opt --debug-flags=MMU configs/learning_gem5/part1/two_level.py --l1i_size='1kB' > output.log
+*** build/X86/gem5.opt configs/example/se.py -c ./tests/test-progs/hello/bin/x86/linux/hello > output.log
 
 
 ### arch/x86/tlb.cc, page_table.cc, faults.cc
