@@ -41,6 +41,7 @@
 #define __ARCH_X86_PAGE_TABLE_WALKER_HH__
 
 #include <vector>
+#include <map>
 
 #include "arch/x86/pagetable.hh"
 #include "arch/x86/tlb.hh"
@@ -66,6 +67,8 @@ namespace X86ISA
                   MasterPort(_name, _walker), walker(_walker)
             {}
 
+          std::map<PacketId, Tick> pkt_tick_map;
+          
           protected:
             Walker *walker;
 

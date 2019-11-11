@@ -105,6 +105,8 @@ namespace X86ISA
         Stats::Scalar wrAccesses;
         Stats::Scalar rdMisses;
         Stats::Scalar wrMisses;
+        Stats::Scalar goodrdPredictionsOnMisses;
+        Stats::Scalar goodwrPredictionsOnMisses;
 
         Fault translateInt(const RequestPtr &req, ThreadContext *tc);
 
@@ -127,7 +129,11 @@ namespace X86ISA
         void translateTiming(
             const RequestPtr &req, ThreadContext *tc,
             Translation *translation, Mode mode) override;
-
+            
+        Addr prev_vaddr = 0xdeadbeef;
+        Addr prev_paddr = 0xdeadbeef;
+        Addr prev_cache_blk = 64; // initialization
+        unsigned long int cache_repeat_cnt = 0;
         /**
          * Do post-translation physical address finalization.
          *

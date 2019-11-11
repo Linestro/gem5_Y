@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2003-2005 The Regents of The University of Michigan
- * All rights reserved.
+ * Copyright 2019 Google Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -25,58 +24,24 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Authors: Nathan Binkert
- *          Gabe Black
+ * Authors: Gabe Black
  */
 
-#include "sim/faults.hh"
-
-#include "arch/isa_traits.hh"
-#include "base/logging.hh"
-#include "cpu/base.hh"
-#include "cpu/thread_context.hh"
-#include "debug/Fault.hh"
-#include "mem/page_table.hh"
-#include "sim/full_system.hh"
-#include "sim/process.hh"
-
-void FaultBase::invoke(ThreadContext * tc, const StaticInstPtr &inst)
+protocol SignalInterrupt
 {
-    if (FullSystem) {
-        DPRINTF(Fault, "Fault %s at PC: %s\n", name(), tc->pcState());
-    } else {
-        panic("fault (%s) detected @ PC %s", name(), tc->pcState());
+    includes
+    {
+        #include "arch/arm/fastmodel/protocol/signal_interrupt.hh"
     }
-}
-
-void UnimpFault::invoke(ThreadContext * tc, const StaticInstPtr &inst)
-{
-    panic("Unimpfault: %s\n", panicStr.c_str());
-}
-
-void ReExec::invoke(ThreadContext *tc, const StaticInstPtr &inst)
-{
-    tc->pcState(tc->pcState());
-}
-
-void SyscallRetryFault::invoke(ThreadContext *tc, const StaticInstPtr &inst)
-{
-    tc->pcState(tc->pcState());
-}
-
-void GenericPageTableFault::invoke(ThreadContext *tc, const StaticInstPtr &inst)
-{
-    bool handled = false;
-    if (!FullSystem) {
-        Process *p = tc->getProcessPtr();
-        handled = p->fixupStackFault(vaddr);
+    properties
+    {
+        description = "Signal an interrupt from gem5.";
+        version = "1.0";
+        dso_safe = 0;
+        sc_slave_base_class_name = "SignalInterruptSlaveBase";
+        sc_slave_socket_class_name = "SignalInterruptTargetSocket";
     }
-    if (!handled)
-        panic("Page table fault when accessing virtual address %#x\n", vaddr);
 
-}
-
-void GenericAlignmentFault::invoke(ThreadContext *tc, const StaticInstPtr &inst)
-{
-    panic("Alignment fault when accessing virtual address %#x\n", vaddr);
+    slave behavior ppi(uint8_t cpu, uint32_t num, bool state);
+    slave behavior spi(uint32_t num, bool state);
 }

@@ -55,7 +55,7 @@ class BaseTLB : public SimObject
     BaseTLB(const Params *p) : SimObject(p) {}
 
   public:
-
+    bool isDtlb;
     enum Mode { Read, Write, Execute };
 
     class Translation

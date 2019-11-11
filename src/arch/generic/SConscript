@@ -51,4 +51,5 @@ SimObject('BaseTLB.py')
 SimObject('ISACommon.py')
 
 DebugFlag('TLB')
+DebugFlag('TLB_START_END')
 Source('pseudo_inst.cc')

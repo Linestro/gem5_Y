@@ -143,10 +143,6 @@ EmulationPageTable::lookup(Addr vaddr)
 bool
 EmulationPageTable::translate(Addr vaddr, Addr &paddr)
 {
-    // override, TLB now always gives a fault. 
-    // Haojie
-    // return false;
-
     const Entry *entry = lookup(vaddr);
     if (!entry) {
         DPRINTF(MMU, "Couldn't Translate: %#x\n", vaddr);

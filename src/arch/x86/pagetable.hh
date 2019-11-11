@@ -92,9 +92,6 @@ namespace X86ISA
         // A sequence number to keep track of LRU.
         uint64_t lruSeq;
 
-        // if it is a 2xsize page for each tlb entry, 0 for no, 1 for coalescing next, -1 for coalescing previous. 
-        int is_super;
-
         TlbEntryTrie::Handle trieHandle;
 
         TlbEntry(Addr asn, Addr _vaddr, Addr _paddr,

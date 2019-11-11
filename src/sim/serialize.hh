@@ -69,6 +69,9 @@ class SimObjectResolver;
 
 typedef std::ostream CheckpointOut;
 
+extern bool GIVE_ME_A_NAME_log_exists;
+extern const char *new_home;
+
 class CheckpointIn
 {
   private:

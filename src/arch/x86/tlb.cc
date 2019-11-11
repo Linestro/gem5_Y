@@ -52,22 +52,18 @@
 #include "base/trace.hh"
 #include "cpu/thread_context.hh"
 #include "debug/TLB.hh"
+#include "debug/TLB_START_END.hh"
 #include "mem/page_table.hh"
 #include "mem/request.hh"
 #include "sim/full_system.hh"
 #include "sim/process.hh"
+#include "sim/serialize.hh"
+#include <fstream>
 
 namespace X86ISA {
 
 TLB::TLB(const Params *p)
-    // I modified the TLB to be 16 entries to enable more evictions to happen. 
-    // To simulate a more complicated app to fill up the TLB. 
-    // orginal was size(p->size) instead of size(16)
-    // Under such condition, there are 21 LRU evictions and 53 TLB misses. 
-
-    // After coalescing, there are 3 LRU evictions and 47 TLB misses. 
-
-    : BaseTLB(p), configAddress(0), size(16),
+    : BaseTLB(p), configAddress(0), size(p->size),
       tlb(size), lruSeq(0)
 {
     if (!size)
@@ -95,7 +91,6 @@ TLB::evictLRU()
     }
 
     assert(tlb[lru].trieHandle);
-    printf("TLB LRU triggered. \n");
     trie.remove(tlb[lru].trieHandle);
     tlb[lru].trieHandle = NULL;
     freeList.push_back(&tlb[lru]);
@@ -297,7 +292,6 @@ TLB::translate(const RequestPtr &req,
 
     // If protected mode has been enabled...
     if (m5Reg.prot) {
-        bool missed = false;
         DPRINTF(TLB, "In protected mode.\n");
         // If we're not in 64-bit mode, do protection/limit checks
         if (m5Reg.mode != LongMode) {
@@ -343,14 +337,12 @@ TLB::translate(const RequestPtr &req,
             DPRINTF(TLB, "Paging enabled.\n");
             // The vaddr already has the segment base applied.
             TlbEntry *entry = lookup(vaddr);
-            bool hit_prev = lookup(vaddr - 4096) && lookup(vaddr - 4096)->is_super == 1;
-            bool hit_next = lookup(vaddr + 4096) && lookup(vaddr + 4096)->is_super == -1;
             if (mode == Read) {
                 rdAccesses++;
             } else {
                 wrAccesses++;
             }
-            if (!entry && !hit_prev && !hit_next) {
+            if (!entry) {
                 DPRINTF(TLB, "Handling a TLB miss for "
                         "address %#x at pc %#x.\n",
                         vaddr, tc->instAddr());
@@ -368,6 +360,20 @@ TLB::translate(const RequestPtr &req,
                     }
                     entry = lookup(vaddr);
                     assert(entry);
+
+                    // for (int i = 1; i <= 32; i++){
+                    //     TlbEntry *tmp_entry = lookup(vaddr - i * 4096);
+                    //     if(tmp_entry){
+                    //         if ((tmp_entry -> paddr) / 4096 == (entry -> paddr) / 4096 - i){
+                    //             if(mode == Read)
+                    //                 goodrdPredictionsOnMisses++;
+                    //             else
+                    //                 goodwrPredictionsOnMisses++;                               
+                    //         }
+                    //         break;
+                    //     }
+                    // }
+
                 } else {
                     Process *p = tc->getProcessPtr();
                     const EmulationPageTable::Entry *pte =
@@ -386,60 +392,15 @@ TLB::translate(const RequestPtr &req,
                         Addr alignedVaddr = p->pTable->pageAlign(vaddr);
                         DPRINTF(TLB, "Mapping %#x to %#x\n", alignedVaddr,
                                 pte->paddr);
-
-                        printf("Handling a TLB miss for "
-                               "address %lx at pc %lx.\n",
-                                    vaddr, tc->instAddr());
-                        missed = true;
-
                         entry = insert(alignedVaddr, TlbEntry(
                                 p->pTable->pid(), alignedVaddr, pte->paddr,
                                 pte->flags & EmulationPageTable::Uncacheable,
                                 pte->flags & EmulationPageTable::ReadOnly));
-                        
-                        TlbEntry * prev_entry = lookup(vaddr - 4096);
-                        TlbEntry * next_entry = lookup(vaddr + 4096);
-                        if(prev_entry && prev_entry->paddr == entry->paddr - 4096 && prev_entry -> is_super == 0){
-                            prev_entry -> is_super = 1;
-                            TlbEntry *entry = trie.lookup(vaddr);
-                            if (entry) {
-                                entry->trieHandle = NULL;
-                                freeList.push_back(entry);
-                            }
-                            printf("Superpage 2xsize detected. Coalescing vaddr: %lx, paddr: %lx and the following entry\n", vaddr - 4096, prev_entry->paddr);
-                        }
-                        else if(next_entry && next_entry->paddr == entry->paddr + 4096 && next_entry -> is_super == 0){
-                            next_entry -> is_super = -1;
-                            TlbEntry *entry = trie.lookup(vaddr);
-                            if (entry) {
-                                entry->trieHandle = NULL;
-                                freeList.push_back(entry);
-                            }
-                            printf("Superpage 2xsize detected. Coalescing vaddr: %lx, paddr: %lx and the following entry\n", vaddr, entry->paddr);
-                        }
-                        else{
-                            entry->is_super = 0;
-                            printf("Inserting into TLB new entry ... vaddr: %lx, paddr: %lx \n", vaddr, entry->paddr);
-                        }
                     }
                     DPRINTF(TLB, "Miss was serviced.\n");
                 }
             }
-            if(hit_prev){
-                printf("TLB coalesce HIT for "
-                            "address %lx at physical adress %lx !\n",
-                            vaddr - 4096, lookup(vaddr - 4096)->paddr);
-            }
-            else if(hit_next){
-                printf("TLB coalesce HIT for "
-                            "address %lx at physical adress %lx !\n",
-                            vaddr + 4096, lookup(vaddr + 4096)->paddr);
-            }
-            else if(missed == false){
-            printf("TLB normal HIT for "
-                        "address %lx at physical adress %lx !\n",
-                        vaddr, entry->paddr);
-            }
+
             DPRINTF(TLB, "Entry found with paddr %#x, "
                     "doing protection checks.\n", entry->paddr);
             // Do paging protection checks.
@@ -461,17 +422,41 @@ TLB::translate(const RequestPtr &req,
                                                    false);
             }
 
-            Addr paddr = 0;
-            // paddr = entry->paddr | (vaddr & mask(entry->logBytes));
-            if(hit_prev){
-                paddr = (lookup(vaddr - 4096)->paddr + 4096) | (vaddr & mask(lookup(vaddr - 4096)->logBytes));
+            Addr paddr = entry->paddr | (vaddr & mask(entry->logBytes));
+
+            if (GIVE_ME_A_NAME_log_exists) {
+                Addr pa = paddr;
+                if (isDtlb) {
+                    FILE *pFile = fopen(new_home, "a");
+                    if (prev_vaddr == ((vaddr >> 12) & 0xfffffffff) &&
+                        prev_paddr == pa >> 12 && prev_cache_blk == ((pa >> 6) & 0x3f)) {
+                        cache_repeat_cnt ++;        // Hit on the cache block
+                        fclose(pFile);
+                    }
+                    else if(prev_vaddr == ((vaddr >> 12) & 0xfffffffff) &&
+                        prev_paddr == pa >> 12){    // Hit on Page but miss on cache
+                        fprintf(pFile, "%lx:%lu;", prev_cache_blk, cache_repeat_cnt);
+                        fclose(pFile);
+                        cache_repeat_cnt = 1;
+                    }
+                    else {
+                        if(prev_cache_blk == 64){   // initilization
+                            fprintf(pFile, "%lx;%lx;", (vaddr >> 12) & 0xfffffffff, pa >> 12);
+                            fclose(pFile);
+                        }
+                        else{                       // Miss on Page.
+                            fprintf(pFile, "%lx:%lu;\n%lx;%lx;", prev_cache_blk, cache_repeat_cnt, 
+                                    (vaddr >> 12) & 0xfffffffff, pa >> 12);
+                            fclose(pFile);
+                        }
+                        cache_repeat_cnt = 1;
+                    }
+                    prev_vaddr = (vaddr >> 12) & 0xfffffffff;
+                    prev_paddr = pa >> 12;
+                    prev_cache_blk = (pa >> 6) & 0x3f;
+                }
             }
-            else if(hit_next){
-                paddr = (lookup(vaddr + 4096)->paddr - 4096) | (vaddr & mask(lookup(vaddr + 4096)->logBytes));
-            }
-            else{
-                paddr = entry->paddr | (vaddr & mask(entry->logBytes));
-            }
+
             DPRINTF(TLB, "Translated %#x -> %#x.\n", vaddr, paddr);
             req->setPaddr(paddr);
             if (entry->uncacheable)
@@ -540,6 +525,13 @@ TLB::regStats()
         .name(name() + ".wrMisses")
         .desc("TLB misses on write requests");
 
+    goodrdPredictionsOnMisses
+        .name(name() + ".goodrdPredictions")
+        .desc("TLB predictions correct on read misses");
+
+    goodwrPredictionsOnMisses
+        .name(name() + ".goodwrPredictions")
+        .desc("TLB predictions correct on write misses");
 }
 
 void

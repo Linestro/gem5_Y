@@ -91,6 +91,8 @@ SimpleThread::SimpleThread(BaseCPU *_cpu, int _thread_num, System *_sys,
       predicate(true), memAccPredicate(true), system(_sys),
       itb(_itb), dtb(_dtb), decoder(TheISA::Decoder(_isa))
 {
+    itb -> isDtlb = false;
+    dtb -> isDtlb = true;
     quiesceEvent = new EndQuiesceEvent(this);
 
     clearArchRegs();

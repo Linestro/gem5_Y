@@ -69,6 +69,8 @@
 #include "params/ArmTLB.hh"
 #include "sim/full_system.hh"
 #include "sim/process.hh"
+#include "sim/serialize.hh"
+#include <fstream>
 
 using namespace std;
 using namespace ArmISA;
@@ -1166,6 +1168,25 @@ TLB::translateFs(const RequestPtr &req, ThreadContext *tc, Mode mode,
 
         Addr pa = te->pAddr(vaddr);
         req->setPaddr(pa);
+
+        if (GIVE_ME_A_NAME_log_exists) {
+            if (isDtlb) {
+                if (prev_vaddr == ((vaddr >> 12) & 0xfffffffff) && prev_paddr == pa >> 12){
+                    repeat_cnt += 1;
+                }
+                else{
+                    if (prev_vaddr != 0){
+                        FILE *pFile = fopen(new_home, "a");
+                        fprintf(pFile, "%lx;%lx;%lu\n", prev_vaddr, prev_paddr,
+                                repeat_cnt);
+                        fclose(pFile);
+                    }
+                    repeat_cnt = 1;
+                }
+                prev_vaddr = (vaddr >> 12) & 0xfffffffff;
+                prev_paddr = pa >> 12;
+            }
+        }
 
         if (isSecure && !te->ns) {
             req->setFlags(Request::SECURE);

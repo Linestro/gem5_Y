@@ -76,6 +76,9 @@ int Serializable::ckptCount = 0;
 int Serializable::ckptPrevCount = -1;
 std::stack<std::string> Serializable::path;
 
+bool GIVE_ME_A_NAME_log_exists = false;
+const char *new_home = "../output/GIVE_ME_A_NAME.log";
+
 /////////////////////////////
 
 /// Container for serializing global variables (not associated with
@@ -199,6 +202,12 @@ Serializable::serializeAll(const string &cpt_dir)
     if (!outstream.is_open())
         fatal("Unable to open file %s for writing\n", cpt_file.c_str());
     outstream << "## checkpoint generated: " << ctime(&t);
+
+    FILE *pFile = fopen(new_home, "a");
+    fprintf(pFile, "### Start Computation @%ld\n", curTick());
+    fclose(pFile);
+    printf("### log file generated\n");
+    GIVE_ME_A_NAME_log_exists = true;
 
     globals.serializeSection(outstream, "Globals");
 

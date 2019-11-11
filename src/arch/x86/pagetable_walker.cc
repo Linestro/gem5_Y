@@ -102,6 +102,13 @@ Walker::startFunctional(ThreadContext * _tc, Addr &addr, unsigned &logBytes,
 bool
 Walker::WalkerPort::recvTimingResp(PacketPtr pkt)
 {
+    auto it = pkt_tick_map.find(pkt->id);
+    if (it != pkt_tick_map.end())
+    {
+        DPRINTF(PageTableWalker, "Received response. Deleting %lu\n", pkt->id);
+        DPRINTF(PageTableWalker, "Walking time in tick is %lu\n", curTick() - it->second);
+        pkt_tick_map.erase(it);
+    }
     return walker->recvTimingResp(pkt);
 }
 
@@ -156,6 +163,8 @@ bool Walker::sendTiming(WalkerState* sendingState, PacketPtr pkt)
     WalkerSenderState* walker_state = new WalkerSenderState(sendingState);
     pkt->pushSenderState(walker_state);
     if (port.sendTimingReq(pkt)) {
+        port.pkt_tick_map[pkt->id] = curTick();
+        DPRINTF(PageTableWalker, "Adding translation request %lu\n", pkt->id);
         return true;
     } else {
         // undo the adding of the sender state and delete it, as we

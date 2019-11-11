@@ -200,6 +200,10 @@ class TLB : public BaseTLB
     TLB(const ArmTLBParams *p);
     TLB(const Params *p, int _size, TableWalker *_walker);
 
+    Addr prev_vaddr = 0;
+    Addr prev_paddr = 0;
+    unsigned long int repeat_cnt = 0;
+
     /** Lookup an entry in the TLB
      * @param vpn virtual address
      * @param asn context id/address space id to use

@@ -27,58 +27,49 @@
  * Authors: Gabe Black
  */
 
-#ifndef __ARCH_ARM_FASTMODEL_GIC_COMMANDS_HH__
-#define __ARCH_ARM_FASTMODEL_GIC_COMMANDS_HH__
+#ifndef __ARCH_ARM_FASTMODEL_COMMON_SIGNAL_RECEIVER_HH__
+#define __ARCH_ARM_FASTMODEL_COMMON_SIGNAL_RECEIVER_HH__
 
-#include <cstdint>
-
-#include "base/logging.hh"
-#include "sg/SGSignal.h"
+#include <amba_pv.h>
+#include <functional>
 
 namespace FastModel
 {
 
-class PPICommand
+class SignalReceiver : public amba_pv::signal_slave_base<bool>
 {
+  public:
+    typedef std::function<void(bool)> OnChangeFunc;
+
   private:
-    uint8_t _cpu;
-    uint32_t _num;
-    sg::Signal::State _state;
+    bool _state;
+    OnChangeFunc _onChange;
 
   public:
-    PPICommand(uint8_t c, uint32_t n, bool set) :
-        _cpu(c), _num(n), _state(set ? sg::Signal::Set : sg::Signal::Clear)
+    amba_pv::signal_slave_export<bool> signal_in;
+
+    SignalReceiver(const char *name) : SignalReceiver(name, nullptr) {}
+
+    SignalReceiver(const char *name, OnChangeFunc on_change) :
+        amba_pv::signal_slave_base<bool>(name),
+        _state(false), _onChange(on_change)
     {
-        panic_if(_cpu > 255, "PPICommand CPU out of bounds");
-        panic_if(_num > 15, "PPICommand number out of bounds");
+        signal_in.bind(*this);
     }
 
-    PPICommand() : PPICommand(0, 0, false) {}
+    void onChange(OnChangeFunc func) { _onChange = func; }
 
-    uint8_t cpu() const { return _cpu; }
-    uint32_t num() const { return _num; }
-    sg::Signal::State state() const { return _state; }
-};
-
-class SPICommand
-{
-  private:
-    uint32_t _num;
-    sg::Signal::State _state;
-
-  public:
-    SPICommand(uint32_t n, bool set) :
-        _num(n), _state(set ? sg::Signal::Set : sg::Signal::Clear)
+    void
+    set_state(int export_id, const bool &new_state) override
     {
-        panic_if(_num > 987, "SPICommand number out of bounds");
+        if (new_state == _state)
+            return;
+
+        _state = new_state;
+        _onChange(_state);
     }
-
-    SPICommand() : SPICommand(0, false) {}
-
-    uint32_t num() const { return _num; }
-    sg::Signal::State state() const { return _state; }
 };
 
 } // namespace FastModel
 
-#endif // __ARCH_ARM_FASTMODEL_GIC_COMMANDS_HH__
+#endif // __ARCH_ARM_FASTMODEL_COMMON_SIGNAL_RECEIVER_HH__
